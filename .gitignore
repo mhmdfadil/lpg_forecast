@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+instance/
+uploads/*
+!uploads/.gitkeep
+*.xlsx
+!sample_data/*.xlsx
+.DS_Store
+*.log

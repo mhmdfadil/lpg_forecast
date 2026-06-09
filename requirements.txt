@@ -1,0 +1,14 @@
+Flask
+Werkzeug
+python-dotenv
+supabase
+pandas
+numpy
+scipy
+scikit-learn
+statsmodels
+pmdarima
+openpyxl
+XlsxWriter
+bcrypt
+gunicorn
