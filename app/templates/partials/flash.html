@@ -1,0 +1,18 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="margin-bottom: var(--space-5);">
+    {% for category, message in messages %}
+      {% set icon = {
+        'success': 'fa-circle-check',
+        'danger': 'fa-circle-exclamation',
+        'warning': 'fa-triangle-exclamation',
+        'info': 'fa-circle-info'
+      }.get(category, 'fa-circle-info') %}
+      <div class="alert-nm alert-{{ category }}" data-flash>
+        <i class="fa-solid {{ icon }}"></i>
+        <span>{{ message }}</span>
+      </div>
+    {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
