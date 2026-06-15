@@ -1,0 +1,57 @@
+<aside class="sidebar">
+    <div class="brand">
+        <div class="brand-mark"><i class="fa-solid fa-fire-flame-curved"></i></div>
+        <div class="brand-text">
+            <div class="brand-title">SiForLPG</div>
+            <div class="brand-sub">Forecasting ARIMA · SARIMA</div>
+        </div>
+    </div>
+
+    <nav class="nav-group">
+        <div class="nav-label">Utama</div>
+        <a href="{{ url_for('dashboard.index') }}" class="nav-link {{ 'active' if request.endpoint == 'dashboard.index' }}">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+        </a>
+
+        <div class="nav-label">Data</div>
+        <a href="{{ url_for('data.index') }}" class="nav-link {{ 'active' if request.endpoint == 'data.index' }}">
+            <i class="fa-solid fa-database"></i> Kelola Dataset
+        </a>
+        <a href="{{ url_for('data.upload') }}" class="nav-link {{ 'active' if request.endpoint == 'data.upload' }}">
+            <i class="fa-solid fa-file-arrow-up"></i> Import Excel
+        </a>
+        <a href="{{ url_for('data.view_historis') }}" class="nav-link {{ 'active' if request.endpoint == 'data.view_historis' }}">
+            <i class="fa-solid fa-clock-rotate-left"></i> Data Historis 2023–2025
+        </a>
+        <a href="{{ url_for('data.view_aktual') }}" class="nav-link {{ 'active' if request.endpoint == 'data.view_aktual' }}">
+            <i class="fa-solid fa-calendar-check"></i> Data Aktual 2026
+        </a>
+        <a href="{{ url_for('data.kontribusi') }}" class="nav-link {{ 'active' if request.endpoint == 'data.kontribusi' }}">
+            <i class="fa-solid fa-map-location-dot"></i> Kontribusi Kab/Kota
+        </a>
+
+        <div class="nav-label">Forecasting</div>
+        <a href="{{ url_for('forecast.new_run') }}" class="nav-link {{ 'active' if request.endpoint == 'forecast.new_run' }}">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Proses Forecasting
+        </a>
+        <a href="{{ url_for('forecast.index') }}" class="nav-link {{ 'active' if request.endpoint in ['forecast.index','forecast.detail'] }}">
+            <i class="fa-solid fa-chart-line"></i> Riwayat & Statistik
+        </a>
+
+        <div class="nav-label">Akun</div>
+        <a href="{{ url_for('auth.profile') }}" class="nav-link {{ 'active' if request.endpoint == 'auth.profile' }}">
+            <i class="fa-solid fa-user-gear"></i> Profil & Password
+        </a>
+    </nav>
+
+    <div class="sidebar-foot">
+        <div class="theme-switch" style="width:100%; justify-content: space-between; margin-bottom: var(--space-3);">
+            <button type="button" data-theme-btn="light" title="Mode Terang"><i class="fa-solid fa-sun"></i></button>
+            <button type="button" data-theme-btn="dark" title="Mode Gelap"><i class="fa-solid fa-moon"></i></button>
+            <button type="button" data-theme-btn="system" title="Ikuti Sistem"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-block btn-sm">
+            <i class="fa-solid fa-right-from-bracket"></i> Keluar
+        </a>
+    </div>
+</aside>
