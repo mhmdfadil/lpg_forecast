@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} · SiForLPG</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛽</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="sidebar-backdrop" data-sidebar-backdrop></div>
+<div class="app-shell">
+    {% include 'partials/sidebar.html' %}
+
+    <div class="main-area">
+        {% set page_title = page_title|default('Dashboard') %}
+        {% set breadcrumb_text = breadcrumb_text|default('Admin') %}
+        {% include 'partials/navbar.html' %}
+
+        <main class="main-content">
+            {% include 'partials/flash.html' %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
