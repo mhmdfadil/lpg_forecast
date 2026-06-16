@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% set page_title = 'Profil & Password' %}
+{% set breadcrumb_text = 'Akun' %}
+{% block title %}Profil{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up">
+    <span class="section-eyebrow">Akun Saya</span>
+    <h2>Profil & Keamanan</h2>
+    <p>Kelola informasi akun dan ubah kata sandi administrator.</p>
+</div>
+
+<div class="grid-2 fade-up fade-up-delay-1" style="align-items:start;">
+    <div class="nm-card">
+        <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-id-badge text-pink"></i> Informasi Profil</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_profile">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input class="form-control" type="text" value="{{ admin.username }}" disabled style="opacity:.6;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nama Lengkap</label>
+                <input class="form-control" type="text" name="full_name" value="{{ admin.full_name or '' }}" placeholder="Nama Lengkap">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-control" type="email" name="email" value="{{ admin.email or '' }}" placeholder="admin@email.com">
+            </div>
+            <button type="submit" class="btn btn-brand btn-block"><i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan</button>
+        </form>
+    </div>
+
+    <div class="nm-card">
+        <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-key text-sky"></i> Ubah Password</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="change_password">
+            <div class="form-group">
+                <label class="form-label">Password Saat Ini</label>
+                <input class="form-control" type="password" name="current_password" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password Baru</label>
+                <input class="form-control" type="password" name="new_password" minlength="6" required>
+                <div class="form-hint">Minimal 6 karakter.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Konfirmasi Password Baru</label>
+                <input class="form-control" type="password" name="confirm_password" minlength="6" required>
+            </div>
+            <button type="submit" class="btn btn-outline-brand btn-block"><i class="fa-solid fa-lock"></i> Ubah Password</button>
+        </form>
+    </div>
+</div>
+
+<div class="nm-card fade-up fade-up-delay-2" style="margin-top: var(--space-5);">
+    <h3 style="font-size:16px; margin-bottom: var(--space-3);"><i class="fa-solid fa-clock text-green"></i> Aktivitas Login</h3>
+    <p class="fs-sm">Login terakhir: <span class="fw-bold text-muted">{{ admin.last_login_at or 'Belum tercatat' }}</span></p>
+    <p class="fs-sm" style="margin-bottom:0;">Akun dibuat: <span class="fw-bold text-muted">{{ admin.created_at[:10] if admin.created_at else '-' }}</span></p>
+</div>
+{% endblock %}
