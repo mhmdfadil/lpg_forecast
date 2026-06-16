@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% set page_title = 'Dashboard' %}
+{% set breadcrumb_text = 'Beranda' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up">
+    <span class="section-eyebrow">Ringkasan Sistem</span>
+    <h2>Selamat datang, {{ admin_name }} 👋</h2>
+    <p>Pantau data penyaluran LPG dan jalankan peramalan ARIMA / SARIMA dari sini.</p>
+</div>
+
+<div class="stat-grid fade-up fade-up-delay-1" style="margin-bottom: var(--space-5);">
+    <div class="stat-card">
+        <div class="stat-icon pink"><i class="fa-solid fa-database"></i></div>
+        <div class="stat-value">{{ "{:,}".format(jumlah_historis) }}</div>
+        <div class="stat-label">Baris Data Historis (2023–2025)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon sky"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="stat-value">{{ "{:,}".format(jumlah_aktual) }}</div>
+        <div class="stat-label">Baris Data Aktual 2026</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="stat-value">{{ runs|length }}</div>
+        <div class="stat-label">Proses Forecasting Terakhir</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fa-solid fa-calendar-days"></i></div>
+        <div class="stat-value" style="font-size:16px;">
+            {{ rentang_historis[0] or '-' }}<br><span class="text-muted" style="font-size:12px; font-weight:600;">s.d. {{ rentang_historis[1] or '-' }}</span>
+        </div>
+        <div class="stat-label">Rentang Data Historis</div>
+    </div>
+</div>
+
+<div class="grid-2 fade-up fade-up-delay-2" style="align-items:start;">
+    <div class="nm-card">
+        <div class="section-title-block">
+            <span class="section-eyebrow">Tren Penyaluran</span>
+            <h2 style="font-size:18px;">Total Penyaluran LPG Harian (Historis)</h2>
+        </div>
+        {% if chart_labels %}
+        <canvas id="trendChart" height="220"></canvas>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-chart-area"></i></div>
+            <h3>Belum ada data</h3>
+            <p class="fs-sm">Unggah dataset historis untuk melihat grafik tren.</p>
+            <a href="{{ url_for('data.upload') }}" class="btn btn-brand btn-sm" style="margin-top:8px;">Import Dataset</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="nm-card">
+        <div class="section-title-block">
+            <span class="section-eyebrow">Kontribusi Wilayah</span>
+            <h2 style="font-size:18px;">Top 5 Kabupaten/Kota</h2>
+        </div>
+        {% if kontribusi %}
+        <div style="display:flex; flex-direction:column; gap: var(--space-3);">
+            {% for k in kontribusi %}
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;">
+                    <span>{{ k.nama_wilayah.title() }}</span>
+                    <span class="text-pink">{{ k.persentase }}%</span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" style="width:{{ k.persentase }}%;"></div></div>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="{{ url_for('data.kontribusi') }}" class="btn btn-ghost btn-sm btn-block" style="margin-top: var(--space-5);">
+            Lihat Selengkapnya <i class="fa-solid fa-arrow-right"></i>
+        </a>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-map"></i></div>
+            <h3>Belum ada data</h3>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="nm-card fade-up fade-up-delay-3" style="margin-top: var(--space-5);">
+    <div class="section-title-block" style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+            <span class="section-eyebrow">Riwayat</span>
+            <h2 style="font-size:18px;">Proses Forecasting Terbaru</h2>
+        </div>
+        <a href="{{ url_for('forecast.new_run') }}" class="btn btn-brand btn-sm">
+            <i class="fa-solid fa-plus"></i> Forecasting Baru
+        </a>
+    </div>
+
+    {% if runs %}
+    <div class="table-wrap">
+        <table class="nm-table">
+            <thead><tr>
+                <th>Nama Run</th><th>Wilayah</th><th>Periode Prediksi</th>
+                <th>Model Terbaik</th><th>RMSE Terbaik</th><th>Tanggal</th><th></th>
+            </tr></thead>
+            <tbody>
+            {% for r in runs %}
+                <tr>
+                    <td class="fw-bold">{{ r.nama_run }}</td>
+                    <td>{{ r.wilayah_scope }}</td>
+                    <td>{{ r.tanggal_mulai_prediksi }} – {{ r.tanggal_akhir_prediksi }}</td>
+                    <td>
+                        {% if r.model_terbaik == 'ARIMA' %}
+                        <span class="badge badge-sky"><span class="badge-dot"></span> ARIMA</span>
+                        {% else %}
+                        <span class="badge badge-green"><span class="badge-dot"></span> SARIMA</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ '%.2f'|format(r.arima_rmse_test if r.model_terbaik=='ARIMA' else r.sarima_rmse_test) }}</td>
+                    <td class="text-muted fs-sm">{{ r.created_at[:10] if r.created_at else '-' }}</td>
+                    <td><a href="{{ url_for('forecast.detail', run_id=r.id) }}" class="icon-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <h3>Belum ada proses forecasting</h3>
+        <p class="fs-sm">Jalankan proses forecasting pertama Anda untuk melihat hasil di sini.</p>
+        <a href="{{ url_for('forecast.new_run') }}" class="btn btn-brand btn-sm" style="margin-top:8px;">Mulai Forecasting</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const labels = {{ chart_labels|tojson }};
+const values = {{ chart_values|tojson }};
+const c = chartColors();
+if (labels.length) {
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Penyaluran (Kg)',
+                data: values,
+                borderColor: c.pink,
+                backgroundColor: c.pinkLight,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 0,
+                borderWidth: 2.5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: c.ink500, maxTicksLimit: 8 }, grid: { display: false } },
+                y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
