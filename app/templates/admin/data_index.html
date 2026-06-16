@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% set page_title = 'Kelola Dataset' %}
+{% set breadcrumb_text = 'Data' %}
+{% block title %}Kelola Dataset{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up" style="display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap: var(--space-3);">
+    <div>
+        <span class="section-eyebrow">Manajemen Data</span>
+        <h2>Dataset Penyaluran LPG</h2>
+        <p>Kelola data historis (2023–2025) dan data aktual pembanding (2026).</p>
+    </div>
+    <a href="{{ url_for('data.upload') }}" class="btn btn-brand"><i class="fa-solid fa-file-arrow-up"></i> Import Dataset Baru</a>
+</div>
+
+<div class="stat-grid fade-up fade-up-delay-1" style="margin-bottom: var(--space-5);">
+    <div class="stat-card">
+        <div class="stat-icon pink"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        <div class="stat-value">{{ "{:,}".format(jumlah_historis) }}</div>
+        <div class="stat-label">Baris — Data Historis Faktual (Training)</div>
+        <div class="fs-sm text-muted">{{ rentang_historis[0] or '-' }} s.d. {{ rentang_historis[1] or '-' }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon sky"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="stat-value">{{ "{:,}".format(jumlah_aktual) }}</div>
+        <div class="stat-label">Baris — Data Aktual 2026 (Pembanding)</div>
+        <div class="fs-sm text-muted">{{ rentang_aktual[0] or '-' }} s.d. {{ rentang_aktual[1] or '-' }}</div>
+    </div>
+</div>
+
+<div class="grid-2 fade-up fade-up-delay-2" style="align-items:start;">
+    <div class="nm-card">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-database text-pink"></i> Data Historis Faktual</h3>
+        <p class="fs-sm">Sheet acuan: <code class="mono">data_2023-2025_faktualhistoris</code>. Digunakan sebagai dataset training model ARIMA & SARIMA.</p>
+        <div style="display:flex; gap:10px; margin-top: var(--space-4); flex-wrap:wrap;">
+            <a href="{{ url_for('data.view_historis') }}" class="btn btn-neumorph btn-sm"><i class="fa-solid fa-eye"></i> Lihat Data</a>
+            <form method="POST" action="{{ url_for('data.hapus', tipe='historis') }}" onsubmit="return confirm('Yakin ingin menghapus SELURUH data historis? Tindakan ini tidak dapat dibatalkan.');">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i> Hapus Semua</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="nm-card">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-calendar-check text-sky"></i> Data Aktual 2026</h3>
+        <p class="fs-sm">Sheet acuan: <code class="mono">data_uji_2026_faktual</code>. Digunakan sebagai pembanding fleksibel hasil peramalan.</p>
+        <div style="display:flex; gap:10px; margin-top: var(--space-4); flex-wrap:wrap;">
+            <a href="{{ url_for('data.view_aktual') }}" class="btn btn-neumorph btn-sm"><i class="fa-solid fa-eye"></i> Lihat Data</a>
+            <form method="POST" action="{{ url_for('data.hapus', tipe='aktual_2026') }}" onsubmit="return confirm('Yakin ingin menghapus SELURUH data aktual 2026? Tindakan ini tidak dapat dibatalkan.');">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i> Hapus Semua</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="nm-card fade-up fade-up-delay-3" style="margin-top: var(--space-5);">
+    <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-list-check text-green"></i> Log Import Terbaru</h3>
+    {% if logs %}
+    <div class="table-wrap">
+        <table class="nm-table">
+            <thead><tr><th>File</th><th>Tipe</th><th>Baris</th><th>Periode</th><th>Status</th><th>Tanggal</th></tr></thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td class="fw-bold">{{ log.nama_file }}</td>
+                    <td>{% if log.tipe_dataset == 'historis' %}<span class="badge badge-pink">Historis</span>{% else %}<span class="badge badge-sky">Aktual 2026</span>{% endif %}</td>
+                    <td>{{ "{:,}".format(log.jumlah_baris) }}</td>
+                    <td class="fs-sm">{{ log.tanggal_mulai or '-' }} – {{ log.tanggal_akhir or '-' }}</td>
+                    <td>
+                        {% if log.status == 'sukses' %}<span class="badge badge-green">Sukses</span>
+                        {% elif log.status == 'gagal' %}<span class="badge badge-red">Gagal</span>
+                        {% else %}<span class="badge badge-amber">Sebagian</span>{% endif %}
+                    </td>
+                    <td class="fs-sm text-muted">{{ log.created_at[:16].replace('T',' ') if log.created_at else '-' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+        <h3>Belum ada riwayat import</h3>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
