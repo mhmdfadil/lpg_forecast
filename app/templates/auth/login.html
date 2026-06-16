@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk · SiForLPG</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛽</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="theme-switch" style="position:fixed; top:20px; right:20px; z-index:10;">
+        <button type="button" data-theme-btn="light" title="Mode Terang"><i class="fa-solid fa-sun"></i></button>
+        <button type="button" data-theme-btn="dark" title="Mode Gelap"><i class="fa-solid fa-moon"></i></button>
+        <button type="button" data-theme-btn="system" title="Ikuti Sistem"><i class="fa-solid fa-circle-half-stroke"></i></button>
+    </div>
+
+    <div class="auth-shell">
+        <div class="auth-card fade-up">
+            <div class="auth-logo"><i class="fa-solid fa-fire-flame-curved"></i></div>
+            <div style="text-align:center; margin-bottom: var(--space-6);">
+                <h1 style="font-size:21px; font-weight:800;">SiForLPG</h1>
+                <p style="font-size:13px; margin:4px 0 0;">Sistem Informasi Forecasting Permintaan LPG<br>PT Pertamina Patra Niaga — Pangkalan Susu</p>
+            </div>
+
+            {% include 'partials/flash.html' %}
+
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user"></i>
+                        <input class="form-control" type="text" id="username" name="username" placeholder="admin" autocomplete="username" required autofocus>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-lock"></i>
+                        <input class="form-control" type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-brand btn-block" style="margin-top: var(--space-5);">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk ke Dashboard
+                </button>
+            </form>
+
+            <p class="fs-sm text-muted" style="text-align:center; margin-top: var(--space-6); margin-bottom:0;">
+                Akses khusus Administrator &middot; Skripsi Cut Rena Mutia (220170188)
+            </p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>
