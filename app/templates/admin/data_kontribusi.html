@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% set page_title = 'Kontribusi Kabupaten/Kota' %}
+{% set breadcrumb_text = 'Data' %}
+{% block title %}Kontribusi Wilayah{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap: var(--space-3);">
+    <div>
+        <span class="section-eyebrow">Analisis Pendukung</span>
+        <h2>Kontribusi Penyaluran per Kabupaten/Kota</h2>
+        <p>Agregat total penyaluran LPG sepanjang periode data yang tersedia.</p>
+    </div>
+    <div class="tabs">
+        <a href="{{ url_for('data.kontribusi', tipe='historis') }}" class="tab-btn {{ 'active' if tipe == 'historis' }}" style="text-decoration:none; display:inline-flex; align-items:center;">Historis</a>
+        <a href="{{ url_for('data.kontribusi', tipe='aktual_2026') }}" class="tab-btn {{ 'active' if tipe == 'aktual_2026' }}" style="text-decoration:none; display:inline-flex; align-items:center;">Aktual 2026</a>
+    </div>
+</div>
+
+<div class="grid-2 fade-up fade-up-delay-1" style="align-items:start;">
+    <div class="nm-card">
+        <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-chart-pie text-pink"></i> Distribusi Kontribusi</h3>
+        {% if data %}
+        <canvas id="kontribusiChart" height="260"></canvas>
+        {% else %}
+        <div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-chart-pie"></i></div><h3>Belum ada data</h3></div>
+        {% endif %}
+    </div>
+
+    <div class="nm-card">
+        <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-ranking-star text-sky"></i> Peringkat Wilayah</h3>
+        {% if data %}
+        <div class="table-wrap" style="max-height:420px; overflow-y:auto;">
+            <table class="nm-table">
+                <thead><tr><th>#</th><th>Kabupaten/Kota</th><th>Total (Kg)</th><th>%</th></tr></thead>
+                <tbody>
+                {% for d in data %}
+                <tr>
+                    <td class="fw-bold">{{ loop.index }}</td>
+                    <td>{{ d.nama_wilayah.title() }}</td>
+                    <td class="mono">{{ '{:,.2f}'.format(d.total) }}</td>
+                    <td><span class="badge badge-pink">{{ d.persentase }}%</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-table-list"></i></div><h3>Belum ada data</h3></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const data = {{ data|tojson }};
+const c = chartColors();
+if (data.length) {
+    const top = data.slice(0, 8);
+    const others = data.slice(8);
+    const labels = top.map(d => d.nama_wilayah.replace(/KABUPATEN |KOTA /gi, ''));
+    const values = top.map(d => d.total);
+    if (others.length) {
+        labels.push('Lainnya');
+        values.push(others.reduce((a, d) => a + d.total, 0));
+    }
+    const palette = [c.pink, c.sky, c.green, c.pinkLight, c.skyLight, c.greenLight, '#f6b93b', '#9b6bd6', c.ink300];
+    new Chart(document.getElementById('kontribusiChart'), {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: values, backgroundColor: palette, borderWidth: 3, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-elevated') }] },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { color: c.ink700, boxWidth: 12, padding: 14, font: { size: 11 } } } }
+        }
+    });
+}
+</script>
+{% endblock %}
