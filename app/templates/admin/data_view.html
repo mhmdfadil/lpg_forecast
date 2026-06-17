@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% set page_title = 'Data Historis Faktual' if tipe == 'historis' else 'Data Aktual 2026' %}
+{% set breadcrumb_text = 'Data' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up">
+    <span class="section-eyebrow">{{ 'Dataset Training' if tipe == 'historis' else 'Dataset Pembanding' }}</span>
+    <h2>{{ page_title }}</h2>
+    <p>Total {{ "{:,}".format(total_rows) }} baris ditemukan sesuai filter.</p>
+</div>
+
+<div class="nm-card fade-up fade-up-delay-1" style="margin-bottom: var(--space-5);">
+    <form method="GET" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap: var(--space-4);">
+        <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Kabupaten/Kota</label>
+            <select class="form-control" name="wilayah">
+                <option value="TOTAL" {{ 'selected' if wilayah_filter == 'TOTAL' }}>Semua Wilayah (Total)</option>
+                {% for w in wilayah_list %}
+                <option value="{{ w }}" {{ 'selected' if wilayah_filter == w }}>{{ w.title() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Dari Tanggal</label>
+            <input class="form-control" type="date" name="mulai" value="{{ tanggal_mulai or '' }}">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Sampai Tanggal</label>
+            <input class="form-control" type="date" name="akhir" value="{{ tanggal_akhir or '' }}">
+        </div>
+        <button type="submit" class="btn btn-brand"><i class="fa-solid fa-filter"></i> Terapkan</button>
+    </form>
+</div>
+
+<div class="nm-card fade-up fade-up-delay-2" style="margin-bottom: var(--space-5);">
+    <h3 style="font-size:16px; margin-bottom: var(--space-4);"><i class="fa-solid fa-chart-area text-pink"></i> Grafik Tren Harian</h3>
+    {% if chart_labels %}
+    <canvas id="dataChart" height="200"></canvas>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-chart-area"></i></div>
+        <h3>Tidak ada data untuk filter ini</h3>
+    </div>
+    {% endif %}
+</div>
+
+<div class="nm-card fade-up fade-up-delay-3">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-4);">
+        <h3 style="font-size:16px; margin:0;"><i class="fa-solid fa-table text-sky"></i> Tabel Data {{ '(maks. 500 baris ditampilkan)' if total_rows > 500 else '' }}</h3>
+    </div>
+    {% if table_rows %}
+    <div class="table-wrap" style="max-height:520px; overflow-y:auto;">
+        <table class="nm-table">
+            <thead><tr><th>No</th><th>Tanggal</th><th>Kabupaten/Kota</th><th>Total Berat (Kg)</th></tr></thead>
+            <tbody>
+            {% for row in table_rows %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row.tanggal }}</td>
+                    <td>{{ row.nama_wilayah.title() }}</td>
+                    <td class="mono">{{ '{:,.2f}'.format(row.total_berat) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+        <h3>Tidak ada data</h3>
+        <p class="fs-sm">Coba ubah filter, atau <a href="{{ url_for('data.upload') }}">unggah dataset</a> terlebih dahulu.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const labels = {{ chart_labels|tojson }};
+const values = {{ chart_values|tojson }};
+const c = chartColors();
+if (labels.length) {
+    new Chart(document.getElementById('dataChart'), {
+        type: 'line',
+        data: { labels: labels, datasets: [{
+            label: 'Total Penyaluran (Kg)', data: values,
+            borderColor: c.sky, backgroundColor: c.skyLight,
+            fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
+        }]},
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: c.ink500, maxTicksLimit: 10 }, grid: { display: false } },
+                y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
