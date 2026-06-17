@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% set page_title = 'Import Dataset' %}
+{% set breadcrumb_text = 'Data' %}
+{% block title %}Import Dataset{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up">
+    <span class="section-eyebrow">Import Excel</span>
+    <h2>Unggah Dataset Penyaluran LPG</h2>
+    <p>Format file mengikuti struktur <code class="mono">datapenelitian1.xlsx</code> — kolom wajib: <code class="mono">Act. Gds Mvmnt Date</code>, <code class="mono">Kabupaten/Kota</code>, <code class="mono">Total Berat</code>.</p>
+</div>
+
+<div class="grid-2 fade-up fade-up-delay-1" style="align-items:start;">
+    <div class="nm-card">
+        <form method="POST" action="{{ url_for('data.upload') }}" enctype="multipart/form-data" id="uploadForm">
+            <div class="form-group">
+                <label class="form-label">Tipe Dataset</label>
+                <select class="form-control" name="tipe_dataset" required>
+                    <option value="historis">Data Historis Faktual (2023–2025) — Training</option>
+                    <option value="aktual_2026">Data Aktual 2026 — Pembanding</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">File Excel (.xlsx / .xls)</label>
+                <input class="form-control" type="file" name="dataset_file" id="datasetFile" accept=".xlsx,.xls" required>
+                <div class="form-hint">Maksimal 25 MB.</div>
+            </div>
+
+            <div class="form-group" id="sheetGroup" style="display:none;">
+                <label class="form-label">Pilih Sheet</label>
+                <select class="form-control" name="sheet_name" id="sheetSelect"></select>
+                <div class="form-hint">Sistem otomatis mendeteksi sheet yang relevan berdasarkan nama.</div>
+            </div>
+
+            <button type="submit" class="btn btn-brand btn-block" id="submitBtn">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Proses & Simpan ke Database
+            </button>
+        </form>
+    </div>
+
+    <div class="nm-card">
+        <h3 style="font-size:15px; margin-bottom: var(--space-3);"><i class="fa-solid fa-circle-info text-sky"></i> Panduan Format</h3>
+        <div class="step-list">
+            <div class="step-item done">
+                <div class="step-marker">1</div>
+                <div class="step-content">
+                    <h4>Sheet Historis</h4>
+                    <p>Nama disarankan: <code class="mono">data_2023-2025_faktualhistoris</code>. Berisi data harian Jan 2023 – Des 2025 per kabupaten/kota.</p>
+                </div>
+            </div>
+            <div class="step-item done">
+                <div class="step-marker">2</div>
+                <div class="step-content">
+                    <h4>Sheet Aktual 2026</h4>
+                    <p>Nama disarankan: <code class="mono">data_uji_2026_faktual</code>. Berisi data aktual sebagai pembanding fleksibel hasil forecasting.</p>
+                </div>
+            </div>
+            <div class="step-item done">
+                <div class="step-marker">3</div>
+                <div class="step-content">
+                    <h4>Kolom Wajib</h4>
+                    <p><code class="mono">Act. Gds Mvmnt Date</code> (tanggal), <code class="mono">Kabupaten/Kota</code> (teks), <code class="mono">Total Berat</code> (angka, Kg).</p>
+                </div>
+            </div>
+            <div class="step-item done">
+                <div class="step-marker">4</div>
+                <div class="step-content">
+                    <h4>Duplikat Otomatis Diagregasi</h4>
+                    <p>Baris dengan tanggal & wilayah sama akan dijumlahkan otomatis agar representatif sebagai total harian.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const fileInput = document.getElementById('datasetFile');
+const sheetGroup = document.getElementById('sheetGroup');
+const sheetSelect = document.getElementById('sheetSelect');
+const submitBtn = document.getElementById('submitBtn');
+
+fileInput.addEventListener('change', async () => {
+    if (!fileInput.files.length) return;
+    const fd = new FormData();
+    fd.append('dataset_file', fileInput.files[0]);
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Membaca sheet...';
+
+    try {
+        const res = await fetch("{{ url_for('data.preview_sheets') }}", { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.sheets) {
+            sheetSelect.innerHTML = data.sheets.map(s => {
+                const guess = /faktualhistoris|historis|2023|2024|2025/i.test(s) ? ' (Disarankan: Historis)' :
+                              /uji|aktual|2026/i.test(s) ? ' (Disarankan: Aktual 2026)' : '';
+                return `<option value="${s}">${s}${guess}</option>`;
+            }).join('');
+            sheetGroup.style.display = '';
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Proses & Simpan ke Database';
+    }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Memproses & menyimpan...';
+});
+</script>
+{% endblock %}
