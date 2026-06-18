@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% set page_title = 'Riwayat Forecasting' %}
+{% set breadcrumb_text = 'Forecasting' %}
+{% block title %}Riwayat Forecasting{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap: var(--space-3);">
+    <div>
+        <span class="section-eyebrow">Statistik & Riwayat</span>
+        <h2>Riwayat Proses Forecasting</h2>
+        <p>Seluruh proses ARIMA & SARIMA yang pernah dijalankan beserta hasil evaluasinya.</p>
+    </div>
+    <a href="{{ url_for('forecast.new_run') }}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Forecasting Baru</a>
+</div>
+
+{% if runs %}
+<div class="nm-card fade-up fade-up-delay-1">
+    <div class="table-wrap">
+        <table class="nm-table">
+            <thead><tr>
+                <th>Nama Run</th><th>Wilayah</th><th>Periode Prediksi</th>
+                <th>RMSE ARIMA</th><th>RMSE SARIMA</th><th>Model Terbaik</th><th>Tanggal</th><th></th>
+            </tr></thead>
+            <tbody>
+            {% for r in runs %}
+                <tr>
+                    <td class="fw-bold">{{ r.nama_run }}</td>
+                    <td>{{ r.wilayah_scope }}</td>
+                    <td class="fs-sm">{{ r.tanggal_mulai_prediksi }} – {{ r.tanggal_akhir_prediksi }}</td>
+                    <td class="mono">{{ '%.2f'|format(r.arima_rmse_test) if r.arima_rmse_test is not none else '-' }}</td>
+                    <td class="mono">{{ '%.2f'|format(r.sarima_rmse_test) if r.sarima_rmse_test is not none else '-' }}</td>
+                    <td>
+                        {% if r.model_terbaik == 'ARIMA' %}
+                        <span class="badge badge-sky"><span class="badge-dot"></span> ARIMA</span>
+                        {% else %}
+                        <span class="badge badge-green"><span class="badge-dot"></span> SARIMA</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted fs-sm">{{ r.created_at[:16].replace('T',' ') if r.created_at else '-' }}</td>
+                    <td style="display:flex; gap:6px;">
+                        <a href="{{ url_for('forecast.detail', run_id=r.id) }}" class="icon-btn" title="Lihat Detail"><i class="fa-solid fa-eye"></i></a>
+                        <a href="{{ url_for('forecast.export_excel', run_id=r.id) }}" class="icon-btn" title="Download Excel"><i class="fa-solid fa-file-excel"></i></a>
+                        <form method="POST" action="{{ url_for('forecast.hapus_run', run_id=r.id) }}" onsubmit="return confirm('Hapus riwayat forecasting ini?');">
+                            <button type="submit" class="icon-btn" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="nm-card fade-up" style="text-align:center; padding: var(--space-8);">
+    <div class="empty-icon" style="margin:0 auto var(--space-4);"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+    <h3>Belum ada riwayat forecasting</h3>
+    <p class="fs-sm">Jalankan proses forecasting pertama Anda untuk melihat hasil di sini.</p>
+    <a href="{{ url_for('forecast.new_run') }}" class="btn btn-brand" style="margin-top: var(--space-3);">Mulai Forecasting</a>
+</div>
+{% endif %}
+{% endblock %}
