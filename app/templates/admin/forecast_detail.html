@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% set page_title = run.nama_run %}
+{% set breadcrumb_text = 'Forecasting / Detail' %}
+{% block title %}Detail Forecasting{% endblock %}
+
+{% block content %}
+<div class="section-title-block fade-up" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap: var(--space-3);">
+    <div>
+        <span class="section-eyebrow">Hasil Lengkap Proses</span>
+        <h2>{{ run.nama_run }}</h2>
+        <p>
+            Wilayah: <strong>{{ run.wilayah_scope }}</strong> &middot;
+            Data: {{ run.tanggal_mulai_data }} s.d. {{ run.tanggal_akhir_data }} &middot;
+            Prediksi: {{ run.tanggal_mulai_prediksi }} s.d. {{ run.tanggal_akhir_prediksi }} ({{ run.horizon_hari }} hari)
+        </p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a href="{{ url_for('forecast.export_excel', run_id=run.id) }}" class="btn btn-brand"><i class="fa-solid fa-file-excel"></i> Download Excel</a>
+        <a href="{{ url_for('forecast.index') }}" class="btn btn-ghost"><i class="fa-solid fa-arrow-left"></i> Kembali</a>
+    </div>
+</div>
+
+<!-- ===================== Model Terbaik Banner ===================== -->
+<div class="nm-card fade-up fade-up-delay-1" style="margin-bottom: var(--space-5); background: var(--gradient-brand-soft); border:none;">
+    <div style="display:flex; align-items:center; gap: var(--space-5); flex-wrap:wrap;">
+        <div class="brand-mark" style="width:64px; height:64px; border-radius:18px;">
+            <i class="fa-solid fa-trophy" style="font-size:26px;"></i>
+        </div>
+        <div style="flex:1; min-width:200px;">
+            <div class="section-eyebrow" style="margin-bottom:2px;">Model Terbaik</div>
+            <h2 style="font-size:26px; margin-bottom:4px;">{{ run.model_terbaik }}</h2>
+            <p style="margin:0; font-size:13px;">Skor evaluasi: ARIMA {{ run.skor_arima }}/3 &nbsp;vs&nbsp; SARIMA {{ run.skor_sarima }}/3 (berdasarkan MAE, RMSE, MAPE pada data test)</p>
+        </div>
+        <div style="display:flex; gap: var(--space-5);">
+            <div style="text-align:center;">
+                <div class="fs-sm text-muted fw-bold">RMSE ARIMA</div>
+                <div style="font-size:22px; font-weight:800;" class="text-sky">{{ '%.2f'|format(run.arima_rmse_test) if run.arima_rmse_test is not none else '-' }}</div>
+            </div>
+            <div style="text-align:center;">
+                <div class="fs-sm text-muted fw-bold">RMSE SARIMA</div>
+                <div style="font-size:22px; font-weight:800;" class="text-green">{{ '%.2f'|format(run.sarima_rmse_test) if run.sarima_rmse_test is not none else '-' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== Tabs ===================== -->
+<div class="tabs fade-up fade-up-delay-2" data-tabs="#tabPanels" style="margin-bottom: var(--space-5);">
+    <button class="tab-btn active" data-tab="stasioner">1. Stasioneritas</button>
+    <button class="tab-btn" data-tab="acfpacf">2. ACF & PACF</button>
+    <button class="tab-btn" data-tab="model">3. Parameter Model</button>
+    <button class="tab-btn" data-tab="testpred">4. Prediksi vs Test</button>
+    <button class="tab-btn" data-tab="future">5. Peramalan & Aktual</button>
+    <button class="tab-btn" data-tab="evaluasi">6. Evaluasi Akhir</button>
+</div>
+
+<div id="tabPanels">
+
+<!-- ===== Panel 1: Stasioneritas ===== -->
+<div data-tab-panel="stasioner" class="fade-up">
+    <div class="nm-card" style="margin-bottom: var(--space-5);">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-wave-square text-pink"></i> Uji Stasioneritas — Augmented Dickey-Fuller (ADF)</h3>
+        <div class="grid-2" style="margin-top: var(--space-4);">
+            <div class="nm-inset">
+                <div class="badge badge-neutral" style="margin-bottom:10px;">Sebelum Differencing</div>
+                <table class="nm-table" style="background:transparent;">
+                    <tbody>
+                        <tr><td class="fw-bold">ADF Statistic</td><td class="mono">{{ '%.4f'|format(run.adf_statistic_awal) if run.adf_statistic_awal is not none else '-' }}</td></tr>
+                        <tr><td class="fw-bold">P-Value</td><td class="mono">{{ '%.4f'|format(run.adf_pvalue_awal) if run.adf_pvalue_awal is not none else '-' }}</td></tr>
+                        <tr><td class="fw-bold">Status</td><td>
+                            {% if run.adf_stasioner_awal %}<span class="badge badge-green">Stasioner</span>{% else %}<span class="badge badge-amber">Belum Stasioner</span>{% endif %}
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="nm-inset">
+                <div class="badge badge-pink" style="margin-bottom:10px;">Sesudah Differencing (d={{ run.differencing_order }})</div>
+                <table class="nm-table" style="background:transparent;">
+                    <tbody>
+                        <tr><td class="fw-bold">ADF Statistic</td><td class="mono">{{ '%.4f'|format(run.adf_statistic_diff) if run.adf_statistic_diff is not none else '-' }}</td></tr>
+                        <tr><td class="fw-bold">P-Value</td><td class="mono">{{ '%.4f'|format(run.adf_pvalue_diff) if run.adf_pvalue_diff is not none else '-' }}</td></tr>
+                        <tr><td class="fw-bold">Status</td><td>
+                            {% if run.adf_stasioner_diff %}<span class="badge badge-green">Stasioner</span>{% else %}<span class="badge badge-red">Belum Stasioner</span>{% endif %}
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <p class="fs-sm text-muted" style="margin-top: var(--space-4); margin-bottom:0;">
+            <i class="fa-solid fa-circle-info"></i> Data dianggap stasioner jika P-Value &lt; 0.05. Differencing order (d) ditentukan otomatis dan dipakai sebagai parameter model ARIMA/SARIMA.
+        </p>
+    </div>
+
+    <div class="nm-card">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-chart-line text-sky"></i> Plot Data Latih vs Data Uji (Train/Test Split)</h3>
+        <canvas id="trainTestChart" height="120" style="margin-top: var(--space-4);"></canvas>
+    </div>
+</div>
+
+<!-- ===== Panel 2: ACF & PACF ===== -->
+<div data-tab-panel="acfpacf" class="fade-up" style="display:none;">
+    <div class="grid-2" style="align-items:start;">
+        <div class="nm-card">
+            <h3 style="font-size:15px;">Correlogram — ACF</h3>
+            <canvas id="acfChart" height="205"></canvas>
+        </div>
+        <div class="nm-card">
+            <h3 style="font-size:15px;">Correlogram — PACF</h3>
+            <canvas id="pacfChart" height="205"></canvas>
+        </div>
+    </div>
+    <p class="fs-sm text-muted" style="margin-top: var(--space-4);">
+        <i class="fa-solid fa-circle-info"></i> Nilai ACF & PACF dihitung dari data {{ 'sesudah differencing' if run.differencing_order > 0 else 'sebelum differencing (sudah stasioner)' }}, digunakan sebagai dasar identifikasi order (p, q) model.
+    </p>
+</div>
+
+<!-- ===== Panel 3: Parameter Model ===== -->
+<div data-tab-panel="model" class="fade-up" style="display:none;">
+    <div class="grid-2" style="align-items:start;">
+        <div class="nm-card">
+            <div class="badge badge-sky" style="margin-bottom: var(--space-3);">ARIMA</div>
+            <h3 style="font-size:18px;">ARIMA({{ run.arima_p }},{{ run.arima_d }},{{ run.arima_q }})</h3>
+            <table class="nm-table" style="margin-top: var(--space-3);">
+                <tbody>
+                    <tr><td class="fw-bold">Order (p,d,q)</td><td class="mono">({{ run.arima_p }}, {{ run.arima_d }}, {{ run.arima_q }})</td></tr>
+                    <tr><td class="fw-bold">AIC</td><td class="mono">{{ '%.2f'|format(run.arima_aic) if run.arima_aic is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">BIC</td><td class="mono">{{ '%.2f'|format(run.arima_bic) if run.arima_bic is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">MAE (Test)</td><td class="mono">{{ '%.4f'|format(run.arima_mae_test) if run.arima_mae_test is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">RMSE (Test)</td><td class="mono">{{ '%.4f'|format(run.arima_rmse_test) if run.arima_rmse_test is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">MAPE % (Test)</td><td class="mono">{{ '%.2f'|format(run.arima_mape_test) if run.arima_mape_test is not none else '-' }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="nm-card">
+            <div class="badge badge-green" style="margin-bottom: var(--space-3);">SARIMA</div>
+            <h3 style="font-size:18px;">SARIMA({{ run.sarima_p }},{{ run.sarima_d }},{{ run.sarima_q }})({{ run.sarima_pp }},{{ run.sarima_dd }},{{ run.sarima_qq }})<sub>{{ run.sarima_s }}</sub></h3>
+            <table class="nm-table" style="margin-top: var(--space-3);">
+                <tbody>
+                    <tr><td class="fw-bold">Order (p,d,q)</td><td class="mono">({{ run.sarima_p }}, {{ run.sarima_d }}, {{ run.sarima_q }})</td></tr>
+                    <tr><td class="fw-bold">Seasonal (P,D,Q,s)</td><td class="mono">({{ run.sarima_pp }}, {{ run.sarima_dd }}, {{ run.sarima_qq }}, {{ run.sarima_s }})</td></tr>
+                    <tr><td class="fw-bold">AIC</td><td class="mono">{{ '%.2f'|format(run.sarima_aic) if run.sarima_aic is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">BIC</td><td class="mono">{{ '%.2f'|format(run.sarima_bic) if run.sarima_bic is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">MAE (Test)</td><td class="mono">{{ '%.4f'|format(run.sarima_mae_test) if run.sarima_mae_test is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">RMSE (Test)</td><td class="mono">{{ '%.4f'|format(run.sarima_rmse_test) if run.sarima_rmse_test is not none else '-' }}</td></tr>
+                    <tr><td class="fw-bold">MAPE % (Test)</td><td class="mono">{{ '%.2f'|format(run.sarima_mape_test) if run.sarima_mape_test is not none else '-' }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Panel 4: Prediksi vs Test ===== -->
+<div data-tab-panel="testpred" class="fade-up" style="display:none;">
+    <div class="nm-card" style="margin-bottom: var(--space-5);">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-chart-line text-pink"></i> Prediksi vs Aktual — Data Test</h3>
+        <canvas id="testPredChart" height="150" style="margin-top: var(--space-4);"></canvas>
+    </div>
+    <div class="nm-card">
+        <h3 style="font-size:15px; margin-bottom: var(--space-3);">Tabel Detail Prediksi (Data Test)</h3>
+        <div class="table-wrap" style="max-height:420px; overflow-y:auto;">
+            <table class="nm-table">
+                <thead><tr><th>Tanggal</th><th>Aktual</th><th>Prediksi ARIMA</th><th>Residual ARIMA</th><th>Prediksi SARIMA</th><th>Residual SARIMA</th></tr></thead>
+                <tbody>
+                {% for i in range(pred_test_arima|length) %}
+                <tr>
+                    <td>{{ pred_test_arima[i].tanggal }}</td>
+                    <td class="mono">{{ '%.2f'|format(pred_test_arima[i].nilai_aktual) if pred_test_arima[i].nilai_aktual is not none else '-' }}</td>
+                    <td class="mono text-sky">{{ '%.2f'|format(pred_test_arima[i].nilai_prediksi) if pred_test_arima[i].nilai_prediksi is not none else '-' }}</td>
+                    <td class="mono">{{ '%.2f'|format(pred_test_arima[i].residual) if pred_test_arima[i].residual is not none else '-' }}</td>
+                    <td class="mono text-green">{{ '%.2f'|format(pred_test_sarima[i].nilai_prediksi) if i < pred_test_sarima|length and pred_test_sarima[i].nilai_prediksi is not none else '-' }}</td>
+                    <td class="mono">{{ '%.2f'|format(pred_test_sarima[i].residual) if i < pred_test_sarima|length and pred_test_sarima[i].residual is not none else '-' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Panel 5: Future & Aktual ===== -->
+<div data-tab-panel="future" class="fade-up" style="display:none;">
+    <div class="nm-card" style="margin-bottom: var(--space-5);">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-rocket text-pink"></i> Peramalan Masa Depan {{ 'vs Data Aktual 2026' if run.bandingkan_aktual else '' }}</h3>
+        <canvas id="futureChart" height="150" style="margin-top: var(--space-4);"></canvas>
+    </div>
+    <div class="nm-card">
+        <h3 style="font-size:15px; margin-bottom: var(--space-3);">Tabel Detail Peramalan</h3>
+        <div class="table-wrap" style="max-height:420px; overflow-y:auto;">
+            <table class="nm-table">
+                <thead><tr><th>Tanggal</th><th>Prediksi ARIMA</th><th>Prediksi SARIMA</th><th>Aktual 2026</th></tr></thead>
+                <tbody>
+                {% for i in range(pred_future_arima|length) %}
+                <tr>
+                    <td>{{ pred_future_arima[i].tanggal }}</td>
+                    <td class="mono text-sky">{{ '%.2f'|format(pred_future_arima[i].nilai_prediksi) if pred_future_arima[i].nilai_prediksi is not none else '-' }}</td>
+                    <td class="mono text-green">{{ '%.2f'|format(pred_future_sarima[i].nilai_prediksi) if i < pred_future_sarima|length and pred_future_sarima[i].nilai_prediksi is not none else '-' }}</td>
+                    <td class="mono">
+                        {% if pred_future_arima[i].nilai_aktual_2026 is not none %}
+                        <span class="badge badge-amber">{{ '%.2f'|format(pred_future_arima[i].nilai_aktual_2026) }}</span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Panel 6: Evaluasi Akhir ===== -->
+<div data-tab-panel="evaluasi" class="fade-up" style="display:none;">
+    <div class="nm-card" style="margin-bottom: var(--space-5);">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-scale-balanced text-pink"></i> Perbandingan Metrik Evaluasi</h3>
+        <div class="table-wrap" style="margin-top: var(--space-4);">
+            <table class="nm-table">
+                <thead><tr><th>Metrik</th><th>ARIMA</th><th>SARIMA</th><th>Lebih Baik</th></tr></thead>
+                <tbody>
+                    {% set metrics = [
+                        ('MAE (Test)', run.arima_mae_test, run.sarima_mae_test, '%.4f'),
+                        ('RMSE (Test)', run.arima_rmse_test, run.sarima_rmse_test, '%.4f'),
+                        ('MAPE % (Test)', run.arima_mape_test, run.sarima_mape_test, '%.2f'),
+                        ('MAE (vs Aktual 2026)', run.arima_mae_aktual, run.sarima_mae_aktual, '%.4f'),
+                        ('RMSE (vs Aktual 2026)', run.arima_rmse_aktual, run.sarima_rmse_aktual, '%.4f'),
+                        ('MAPE % (vs Aktual 2026)', run.arima_mape_aktual, run.sarima_mape_aktual, '%.2f'),
+                        ('AIC', run.arima_aic, run.sarima_aic, '%.2f'),
+                        ('BIC', run.arima_bic, run.sarima_bic, '%.2f'),
+                    ] %}
+                    {% for label, a_val, s_val, fmt in metrics %}
+                    <tr>
+                        <td class="fw-bold">{{ label }}</td>
+                        <td class="mono">{{ fmt|format(a_val) if a_val is not none else '-' }}</td>
+                        <td class="mono">{{ fmt|format(s_val) if s_val is not none else '-' }}</td>
+                        <td>
+                            {% if a_val is not none and s_val is not none %}
+                                {% if a_val < s_val %}<span class="badge badge-sky">ARIMA</span>
+                                {% elif s_val < a_val %}<span class="badge badge-green">SARIMA</span>
+                                {% else %}<span class="badge badge-neutral">Seri</span>{% endif %}
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="nm-card" style="background: var(--gradient-brand-soft); border:none;">
+        <h3 style="font-size:16px;"><i class="fa-solid fa-flag-checkered text-pink"></i> Kesimpulan</h3>
+        <p style="font-size:14px; margin-bottom:0;">
+            Berdasarkan perbandingan metrik MAE, RMSE, dan MAPE pada data test, model
+            <strong>{{ run.model_terbaik }}</strong> menunjukkan performa terbaik untuk peramalan
+            permintaan LPG pada wilayah <strong>{{ run.wilayah_scope }}</strong> dengan skor evaluasi
+            ARIMA {{ run.skor_arima }}/3 berbanding SARIMA {{ run.skor_sarima }}/3.
+        </p>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const c = chartColors();
+const datasetPoints = {{ dataset_points|tojson }};
+const acfBefore = {{ acf_before|tojson }};
+const acfAfter = {{ acf_after|tojson }};
+const predTestArima = {{ pred_test_arima|tojson }};
+const predTestSarima = {{ pred_test_sarima|tojson }};
+const predFutureArima = {{ pred_future_arima|tojson }};
+const predFutureSarima = {{ pred_future_sarima|tojson }};
+
+// ---- Train/Test chart ----
+const trainPts = datasetPoints.filter(p => p.kelompok === 'train');
+const testPts = datasetPoints.filter(p => p.kelompok === 'test');
+new Chart(document.getElementById('trainTestChart'), {
+    type: 'line',
+    data: {
+        labels: datasetPoints.map(p => p.tanggal),
+        datasets: [
+            { label: 'Data Latih (Train)', data: trainPts.map(p => p.nilai_aktual), borderColor: c.sky, backgroundColor: 'transparent', pointRadius: 0, borderWidth: 2 },
+            { label: 'Data Uji (Test)', data: [...Array(trainPts.length).fill(null), ...testPts.map(p => p.nilai_aktual)], borderColor: c.pink, backgroundColor: 'transparent', pointRadius: 0, borderWidth: 2 },
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: c.ink700 } } },
+        scales: { x: { ticks: { color: c.ink500, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
+});
+
+// ---- ACF / PACF charts ----
+const acfData = acfAfter.length ? acfAfter : acfBefore;
+function corrChart(elId, key, color) {
+    new Chart(document.getElementById(elId), {
+        type: 'bar',
+        data: { labels: acfData.map(d => d.lag), datasets: [{ data: acfData.map(d => d[key]), backgroundColor: color, borderRadius: 4, barThickness: 8 }] },
+        options: { responsive: true, plugins: { legend: { display: false } },
+            scales: { x: { title: { display: true, text: 'Lag', color: c.ink500 }, ticks: { color: c.ink500 }, grid: { display: false } },
+                      y: { min: -1, max: 1, ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
+    });
+}
+corrChart('acfChart', 'acf_value', c.pink);
+corrChart('pacfChart', 'pacf_value', c.sky);
+
+// ---- Test Prediction chart ----
+new Chart(document.getElementById('testPredChart'), {
+    type: 'line',
+    data: {
+        labels: predTestArima.map(p => p.tanggal),
+        datasets: [
+            { label: 'Aktual', data: predTestArima.map(p => p.nilai_aktual), borderColor: c.ink700, borderWidth: 2.5, pointRadius: 0 },
+            { label: 'Prediksi ARIMA', data: predTestArima.map(p => p.nilai_prediksi), borderColor: c.sky, borderDash: [5,4], borderWidth: 2, pointRadius: 0 },
+            { label: 'Prediksi SARIMA', data: predTestSarima.map(p => p.nilai_prediksi), borderColor: c.green, borderDash: [2,3], borderWidth: 2, pointRadius: 0 },
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: c.ink700 } } },
+        scales: { x: { ticks: { color: c.ink500, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
+});
+
+// ---- Future chart ----
+new Chart(document.getElementById('futureChart'), {
+    type: 'line',
+    data: {
+        labels: predFutureArima.map(p => p.tanggal),
+        datasets: [
+            { label: 'Prediksi ARIMA', data: predFutureArima.map(p => p.nilai_prediksi), borderColor: c.sky, borderWidth: 2.5, pointRadius: 0 },
+            { label: 'Prediksi SARIMA', data: predFutureSarima.map(p => p.nilai_prediksi), borderColor: c.green, borderWidth: 2.5, pointRadius: 0 },
+            { label: 'Aktual 2026', data: predFutureArima.map(p => p.nilai_aktual_2026), borderColor: c.pink, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: c.pink, spanGaps: true },
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: c.ink700 } } },
+        scales: { x: { ticks: { color: c.ink500, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
+});
+</script>
+{% endblock %}
