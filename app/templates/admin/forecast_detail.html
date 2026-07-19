@@ -109,8 +109,34 @@
             <canvas id="pacfChart" height="205"></canvas>
         </div>
     </div>
+
+    <div class="nm-card" style="margin-top: var(--space-4);">
+        <h3 style="font-size:15px; margin-bottom: var(--space-3);"><i class="fa-solid fa-ruler text-pink"></i> Keterangan Statistik</h3>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--space-5); align-items:center;">
+            <div>
+                <div class="fs-sm text-muted fw-bold">Jumlah Observasi (n)</div>
+                <div id="acfNObs" style="font-size:20px; font-weight:800;">-</div>
+            </div>
+            <div>
+                <div class="fs-sm text-muted fw-bold">Batas Signifikansi 95%</div>
+                <div id="acfCIVal" style="font-size:20px; font-weight:800;">-</div>
+            </div>
+            <div>
+                <div class="fs-sm text-muted fw-bold">Order Tentatif dari ACF (q)</div>
+                <div id="acfSuggestQ" class="badge badge-pink" style="font-size:14px; margin-top:2px;">-</div>
+            </div>
+            <div>
+                <div class="fs-sm text-muted fw-bold">Order Tentatif dari PACF (p)</div>
+                <div id="acfSuggestP" class="badge badge-sky" style="font-size:14px; margin-top:2px;">-</div>
+            </div>
+        </div>
+        <p class="fs-sm text-muted" style="margin-top: var(--space-4); margin-bottom:0;">
+            <i class="fa-solid fa-circle-info"></i> Batas signifikansi 95% dihitung dengan rumus ±1.96/√n. Order tentatif (p, q) dibaca dari lag terakhir yang nilainya masih berada di luar pita signifikansi sebelum korelasi "terpotong" masuk ke dalam pita — sesuai kaidah identifikasi order ARIMA/SARIMA secara manual dari correlogram. Nilai ini bersifat indikatif; order final model tetap ditentukan otomatis oleh auto_arima pada tahap Parameter Model.
+        </p>
+    </div>
+
     <p class="fs-sm text-muted" style="margin-top: var(--space-4);">
-        <i class="fa-solid fa-circle-info"></i> Nilai ACF & PACF dihitung dari data {{ 'sesudah differencing' if run.differencing_order > 0 else 'sebelum differencing (sudah stasioner)' }}, digunakan sebagai dasar identifikasi order (p, q) model.
+        <i class="fa-solid fa-circle-info"></i> Nilai ACF & PACF dihitung dari data {{ 'sesudah differencing' if run.differencing_order > 0 else 'sebelum differencing (sudah stasioner)' }}, digunakan sebagai dasar identifikasi order (p, q) model. Garis putus-putus merah menandai batas signifikansi 95% (±1.96/√n).
     </p>
 </div>
 
@@ -265,6 +291,7 @@ const c = chartColors();
 const datasetPoints = {{ dataset_points|tojson }};
 const acfBefore = {{ acf_before|tojson }};
 const acfAfter = {{ acf_after|tojson }};
+const acfCI95 = {{ (run.acf_ci95_sesudah if run.differencing_order and run.differencing_order > 0 else run.acf_ci95_sebelum) or 0 }};
 const predTestArima = {{ pred_test_arima|tojson }};
 const predTestSarima = {{ pred_test_sarima|tojson }};
 const predFutureArima = {{ pred_future_arima|tojson }};
@@ -286,19 +313,52 @@ new Chart(document.getElementById('trainTestChart'), {
         scales: { x: { ticks: { color: c.ink500, maxTicksLimit: 10 }, grid: { display: false } }, y: { ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
 });
 
-// ---- ACF / PACF charts ----
+// ---- ACF / PACF charts (dengan garis batas signifikansi 95%: ±1.96/√n) ----
 const acfData = acfAfter.length ? acfAfter : acfBefore;
+const ciUpper = acfData.map(() => acfCI95);
+const ciLower = acfData.map(() => -acfCI95);
+const ciLabel = 'Batas Signifikansi 95% (±' + acfCI95.toFixed(4) + ')';
+
 function corrChart(elId, key, color) {
     new Chart(document.getElementById(elId), {
-        type: 'bar',
-        data: { labels: acfData.map(d => d.lag), datasets: [{ data: acfData.map(d => d[key]), backgroundColor: color, borderRadius: 4, barThickness: 8 }] },
-        options: { responsive: true, plugins: { legend: { display: false } },
+        data: {
+            labels: acfData.map(d => d.lag),
+            datasets: [
+                { type: 'bar', label: 'Nilai', data: acfData.map(d => d[key]), backgroundColor: color, borderRadius: 4, barThickness: 8, order: 2 },
+                { type: 'line', label: ciLabel, data: ciUpper, borderColor: c.red || '#e11d48', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0, order: 1 },
+                { type: 'line', label: '_ciLower', data: ciLower, borderColor: c.red || '#e11d48', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0, order: 1 },
+            ]
+        },
+        options: { responsive: true,
+            plugins: { legend: { display: true, position: 'bottom', labels: { color: c.ink700, filter: (item) => item.text !== '_ciLower' } } },
             scales: { x: { title: { display: true, text: 'Lag', color: c.ink500 }, ticks: { color: c.ink500 }, grid: { display: false } },
                       y: { min: -1, max: 1, ticks: { color: c.ink500 }, grid: { color: c.ink100 } } } }
     });
 }
 corrChart('acfChart', 'acf_value', c.pink);
 corrChart('pacfChart', 'pacf_value', c.sky);
+
+// ---- Keterangan statistik: n, batas CI 95%, order tentatif (p, q) ----
+function suggestedOrder(values, ci) {
+    // Order tentatif = lag signifikan terakhir sebelum korelasi terpotong
+    // masuk ke dalam pita signifikansi (dibaca berurutan mulai lag 1).
+    let order = 0;
+    for (let lag = 1; lag < values.length; lag++) {
+        if (Math.abs(values[lag]) > ci) {
+            order = lag;
+        } else {
+            break;
+        }
+    }
+    return order;
+}
+const nObs = acfCI95 > 0 ? Math.round(Math.pow(1.96 / acfCI95, 2)) : null;
+const qSuggest = suggestedOrder(acfData.map(d => d.acf_value), acfCI95);
+const pSuggest = suggestedOrder(acfData.map(d => d.pacf_value), acfCI95);
+document.getElementById('acfNObs').textContent = nObs !== null ? nObs + ' hari' : '-';
+document.getElementById('acfCIVal').textContent = '±' + acfCI95.toFixed(4);
+document.getElementById('acfSuggestQ').textContent = 'q ≈ ' + qSuggest;
+document.getElementById('acfSuggestP').textContent = 'p ≈ ' + pSuggest;
 
 // ---- Test Prediction chart ----
 new Chart(document.getElementById('testPredChart'), {

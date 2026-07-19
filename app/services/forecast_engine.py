@@ -24,6 +24,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 SEASONAL_PERIOD = 7  # pola musiman mingguan untuk data harian penyaluran LPG
+TRAIN_RATIO = 0.8  # proporsi train/test dibuat mutlak 80% : 20%, tidak bisa diubah dari form
 
 
 def build_daily_series(rows: list) -> pd.Series:
@@ -49,9 +50,14 @@ def build_daily_series(rows: list) -> pd.Series:
     return daily
 
 
-def train_test_split_series(series: pd.Series, train_ratio: float = 0.8):
+def train_test_split_series(series: pd.Series):
+    """
+    Split train/test dibuat MUTLAK 80% Train / 20% Test (TRAIN_RATIO),
+    tidak menerima parameter proporsi dari luar agar konsisten di seluruh
+    proses forecasting.
+    """
     n = len(series)
-    split_idx = max(1, int(n * train_ratio))
+    split_idx = max(1, int(n * TRAIN_RATIO))
     train = series.iloc[:split_idx]
     test = series.iloc[split_idx:]
     return train, test
@@ -90,15 +96,27 @@ def determine_differencing(series: pd.Series, max_d: int = 2):
     return d, current, adf_before, adf_after
 
 
+def acf_pacf_significance_bound(n: int) -> float:
+    """
+    Batas signifikansi 95% untuk grafik ACF/PACF (correlogram): ±1.96/√n,
+    dengan n = jumlah observasi yang dipakai saat menghitung ACF/PACF.
+    """
+    if not n or n <= 0:
+        return 0.0
+    return float(1.96 / np.sqrt(n))
+
+
 def compute_acf_pacf(series: pd.Series, nlags: int = 30):
     series_clean = series.dropna()
     nlags = min(nlags, max(1, len(series_clean) // 2 - 1))
     acf_vals = acf(series_clean, nlags=nlags, fft=True)
     pacf_vals = pacf(series_clean, nlags=nlags, method="ywm")
-    return [
+    items = [
         {"lag": i, "acf": float(acf_vals[i]), "pacf": float(pacf_vals[i])}
         for i in range(len(acf_vals))
     ]
+    ci95 = acf_pacf_significance_bound(len(series_clean))
+    return items, ci95
 
 
 def evaluate_predictions(actual: np.ndarray, predicted: np.ndarray) -> dict:
@@ -194,21 +212,24 @@ def refit_full_and_forecast_future(series: pd.Series, order, seasonal_order, hor
     return mean, ci, fitted_full
 
 
-def run_full_pipeline(rows: list, train_ratio: float, horizon_dates: pd.DatetimeIndex):
+def run_full_pipeline(rows: list, horizon_dates: pd.DatetimeIndex):
     """
     Menjalankan seluruh pipeline forecasting dan mengembalikan dict besar
     berisi semua hasil intermediate (untuk ditampilkan detail di UI & disimpan
-    ke Supabase).
+    ke Supabase). Split train/test bersifat MUTLAK 80% : 20% (TRAIN_RATIO).
     """
     series = build_daily_series(rows)
-    train, test = train_test_split_series(series, train_ratio)
+    train, test = train_test_split_series(series)
 
     # --- Stasioneritas & differencing (berdasarkan train set) ---
     d_order, series_diff, adf_before, adf_after = determine_differencing(train)
 
-    # --- ACF / PACF sebelum & sesudah differencing ---
-    acf_pacf_before = compute_acf_pacf(train)
-    acf_pacf_after = compute_acf_pacf(series_diff) if d_order > 0 else acf_pacf_before
+    # --- ACF / PACF sebelum & sesudah differencing (+ batas signifikansi 95%) ---
+    acf_pacf_before, acf_ci95_before = compute_acf_pacf(train)
+    if d_order > 0:
+        acf_pacf_after, acf_ci95_after = compute_acf_pacf(series_diff)
+    else:
+        acf_pacf_after, acf_ci95_after = acf_pacf_before, acf_ci95_before
 
     results = {
         "series": series,
@@ -219,6 +240,8 @@ def run_full_pipeline(rows: list, train_ratio: float, horizon_dates: pd.Datetime
         "adf_after": adf_after,
         "acf_pacf_before": acf_pacf_before,
         "acf_pacf_after": acf_pacf_after,
+        "acf_ci95_before": acf_ci95_before,
+        "acf_ci95_after": acf_ci95_after,
     }
 
     # ============== ARIMA ==============

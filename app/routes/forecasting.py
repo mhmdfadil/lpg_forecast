@@ -15,7 +15,7 @@ from app.models.data_lpg import (
     fetch_aggregated_daily, get_distinct_wilayah, get_date_range,
 )
 from app.services.forecast_engine import (
-    run_full_pipeline, determine_best_model, SEASONAL_PERIOD,
+    run_full_pipeline, determine_best_model, SEASONAL_PERIOD, TRAIN_RATIO,
 )
 from app.models.forecast_run import (
     create_run, update_run, get_run, list_runs, delete_run,
@@ -60,7 +60,9 @@ def new_run():
     # ---- POST: jalankan pipeline ----
     nama_run = request.form.get("nama_run", "").strip() or f"Forecast {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     wilayah_scope = request.form.get("wilayah_scope", "TOTAL")
-    train_ratio = float(request.form.get("train_ratio", 0.8))
+    # Proporsi train/test bersifat MUTLAK 80% : 20% (TRAIN_RATIO), tidak
+    # menerima input dari form agar tidak bisa diubah pengguna.
+    train_ratio = TRAIN_RATIO
     tanggal_mulai_prediksi = request.form.get("tanggal_mulai_prediksi")
     tanggal_akhir_prediksi = request.form.get("tanggal_akhir_prediksi")
     bandingkan_aktual = request.form.get("bandingkan_aktual") == "on"
@@ -86,7 +88,7 @@ def new_run():
             flash("Tidak ada data historis untuk scope yang dipilih. Silakan upload data terlebih dahulu.", "danger")
             return redirect(url_for("forecast.new_run"))
 
-        results = run_full_pipeline(rows, train_ratio, horizon_dates)
+        results = run_full_pipeline(rows, horizon_dates)
     except Exception as e:
         flash(f"Gagal menjalankan proses forecasting: {e}", "danger")
         traceback.print_exc()
@@ -152,6 +154,8 @@ def new_run():
             "adf_statistic_diff": results["adf_after"]["adf_statistic"],
             "adf_pvalue_diff": results["adf_after"]["p_value"],
             "adf_stasioner_diff": results["adf_after"]["is_stationary"],
+            "acf_ci95_sebelum": results["acf_ci95_before"],
+            "acf_ci95_sesudah": results["acf_ci95_after"] if results["differencing_order"] > 0 else None,
 
             "arima_p": arima["order"][0], "arima_d": arima["order"][1], "arima_q": arima["order"][2],
             "arima_aic": arima["aic"], "arima_bic": arima["bic"],
