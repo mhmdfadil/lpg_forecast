@@ -114,7 +114,7 @@ create table if not exists forecast_run (
     horizon_hari        integer not null,           -- jumlah hari yang diramalkan
     tanggal_mulai_prediksi date not null,
     tanggal_akhir_prediksi date not null,
-    train_test_split    numeric(4,3) default 0.8,   -- proporsi data train (mis. 0.8 = 80%)
+    train_test_split    numeric(4,3) default 0.8,   -- MUTLAK 0.8 (80% train / 20% test), tidak dapat diubah dari form
     bandingkan_aktual   boolean default false,       -- apakah dibandingkan dengan data_aktual_2026
 
     -- Hasil uji stasioneritas (ADF) sebelum differencing
@@ -126,6 +126,11 @@ create table if not exists forecast_run (
     adf_statistic_diff     numeric,
     adf_pvalue_diff        numeric,
     adf_stasioner_diff     boolean,
+
+    -- Batas signifikansi 95% ACF/PACF (±1.96/√n), dipakai sbg garis confidence
+    -- interval pada grafik correlogram di halaman detail run
+    acf_ci95_sebelum       numeric,
+    acf_ci95_sesudah       numeric,
 
     -- Parameter model ARIMA (p,d,q)
     arima_p             integer,
@@ -337,6 +342,15 @@ create policy "allow_all_kontribusi_wilayah" on kontribusi_wilayah for all using
 
 drop policy if exists "allow_all_export_log" on export_log;
 create policy "allow_all_export_log" on export_log for all using (true) with check (true);
+
+-- =====================================================================
+-- MIGRASI: jalankan blok ini di Supabase (SQL Editor) jika database
+-- SUDAH ADA sebelumnya (sudah pernah menjalankan schema di atas), agar
+-- kolom baru batas signifikansi 95% ACF/PACF ikut tersedia tanpa perlu
+-- membuat ulang tabel dari awal.
+-- =====================================================================
+alter table forecast_run add column if not exists acf_ci95_sebelum numeric;
+alter table forecast_run add column if not exists acf_ci95_sesudah numeric;
 
 -- =====================================================================
 -- SELESAI
